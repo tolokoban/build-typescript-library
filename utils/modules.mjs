@@ -68,7 +68,8 @@ export function listRelativeImports(filename, aliases, srcDir, outDir, stats) {
                     srcDir,
                     outDir
                 )
-                let importPath = selectBestCandidate(dealiased, jsModuleDir)
+                let importPath =
+                    selectBestCandidate(dealiased, jsModuleDir) ?? value
                 if (!importPath.startsWith(".")) continue
 
                 const ext = extractExtension(importPath)
@@ -127,7 +128,7 @@ function findLocation(text, pos) {
  *
  * @param {string[]} paths
  * @param {string} jsModuleDir
- * @returns {string}
+ * @returns {string | null}
  */
 function selectBestCandidate(paths, jsModuleDir) {
     for (const path of paths) {
@@ -142,11 +143,7 @@ function selectBestCandidate(paths, jsModuleDir) {
         const path3 = `${path}.js`
         if (isFileandExists(Path.resolve(jsModuleDir, path3))) return path3
     }
-    throw Error(
-        `Couldn't find any module in the following paths:\n${jsModuleDir}\n${paths
-            .map(n => `    ${n}`)
-            .join("\n")}`
-    )
+    return null
 }
 
 function isFileandExists(path) {

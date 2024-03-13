@@ -43,12 +43,20 @@ async function command(cmd) {
     })
 }
 
+let firstCompilation = true
+
 async function start() {
     const stats = {
         importReplacementCount: 0,
     }
     try {
-        console.log()
+        // console.log("\u001B[3J")
+        if (firstCompilation) {
+            console.log()
+            firstCompilation = false
+        } else {
+            console.clear()
+        }
         await command(`npx tsc -p "${tsconfigFilename}"`)
         const modules = await findModules(outDir)
         console.log(
