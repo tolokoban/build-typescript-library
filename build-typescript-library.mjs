@@ -7,12 +7,15 @@ import Chalk from "chalk"
 import Chokidar from "chokidar"
 import { exec } from "child_process"
 import { parseParams } from "./utils/params.mjs"
-import { findModules, listRelativeImports } from "./utils/modules.mjs"
+import { findModules, listLocalImports } from "./utils/modules.mjs"
 import { parseAliases } from "./utils/aliases.mjs"
+import PackageJSON from "./package.json" assert { type: "json" }
 
-console.log(Chalk.yellowBright("+--------------------------+"))
-console.log(Chalk.yellowBright("| Build Typescript Library |"))
-console.log(Chalk.yellowBright("+--------------------------+"))
+const title = ` ${PackageJSON.name} (v${PackageJSON.version}) `
+const hruler = `+${"".padStart(title.length, "-")}+`
+console.log(Chalk.whiteBright(hruler))
+console.log(Chalk.whiteBright(`|${title}|`))
+console.log(Chalk.whiteBright(hruler))
 const params = parseParams()
 const tsconfigFilename = Path.resolve(params.path, "tsconfig.json")
 const tsconfig = JSON5.parse(FS.readFileSync(tsconfigFilename).toString())
@@ -21,10 +24,19 @@ if (!tsconfig.compilerOptions.outDir) {
         "You must define compilerOptions.outDir in the tsconfig.json file!"
     )
 }
-const outDir = Path.resolve(params.path, tsconfig.compilerOptions.outDir)
-const srcDir = Path.resolve(params.path, "src")
+const prjDir = params.path
+const outDir = Path.resolve(prjDir, tsconfig.compilerOptions.outDir)
+const srcDir = Path.resolve(prjDir, params.srcDir)
 console.log(Chalk.yellowBright("Build path"), outDir)
-const aliases = parseAliases(tsconfig, params.path, srcDir)
+const aliases = parseAliases(tsconfig, prjDir, srcDir)
+for (const [key, val] of aliases) {
+    console.log(
+        Chalk.yellow("Alias:"),
+        Chalk.whiteBright(key),
+        ">",
+        Chalk.whiteBright(val)
+    )
+}
 
 async function command(cmd) {
     return new Promise((resolve, reject) => {
@@ -48,6 +60,7 @@ let firstCompilation = true
 async function start() {
     const stats = {
         importReplacementCount: 0,
+        extraModuleExtensions: new Map(),
     }
     try {
         // console.log("\u001B[3J")
@@ -65,7 +78,7 @@ async function start() {
         )
         const setRelativeImports = new Set()
         for (const module of modules) {
-            const relImports = listRelativeImports(
+            const relImports = listLocalImports(
                 Path.resolve(outDir, module),
                 aliases,
                 srcDir,
@@ -94,7 +107,16 @@ async function start() {
         }
         console.log(
             Chalk.yellowBright("Extra modules:        "),
-            setRelativeImports.size
+            setRelativeImports.size,
+            "   ",
+            `(${Array.from(stats.extraModuleExtensions.keys())
+                .map(
+                    key =>
+                        `${Chalk.greenBright(
+                            stats.extraModuleExtensions.get(key)
+                        )}${key}`
+                )
+                .join(", ")})`
         )
         console.log(
             Chalk.yellowBright("Replaced import paths:"),

@@ -35,10 +35,11 @@ export async function findModules(path) {
  * @param {string} outDir
  * @param {{
  *   importReplacementCount: number
+ *   extraModuleExtensions: Map<string, number>
  * }} stats
  * @returns
  */
-export function listRelativeImports(filename, aliases, srcDir, outDir, stats) {
+export function listLocalImports(filename, aliases, srcDir, outDir, stats) {
     try {
         const jsModuleDir = Path.dirname(filename)
         const content = FS.readFileSync(filename).toString()
@@ -76,6 +77,10 @@ export function listRelativeImports(filename, aliases, srcDir, outDir, stats) {
                 if (ext !== ".js") {
                     // This is special module (not a JS one).
                     imports.push(Path.resolve(jsModuleDir, importPath))
+                    stats.extraModuleExtensions.set(
+                        ext,
+                        1 + (stats.extraModuleExtensions.get(ext) ?? 0)
+                    )
                 }
                 if (importPath !== value) {
                     replacements.push({
@@ -83,6 +88,12 @@ export function listRelativeImports(filename, aliases, srcDir, outDir, stats) {
                         end,
                         value: importPath,
                     })
+                    // console.log(
+                    //     "Replace",
+                    //     JSON.stringify(value),
+                    //     "into",
+                    //     JSON.stringify(importPath)
+                    // )
                 }
             } else {
                 continue

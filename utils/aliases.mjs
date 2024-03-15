@@ -11,22 +11,23 @@ import Micromatch from "micromatch"
  *     }
  *   }
  * }} tsconfig
- * @param {string} projectDir
+ * @param {string} prjDir
  * @param {string} srcDir
  * @returns {Array<[string, string[]]>}
  */
-export function parseAliases(tsconfig, projectDir, srcDir) {
+export function parseAliases(tsconfig, prjDir, srcDir) {
     const { compilerOptions } = tsconfig
     if (!compilerOptions) return []
 
-    const { baseUrl = "", paths = {} } = compilerOptions
+    const { baseUrl = Path.relative(prjDir, srcDir), paths = {} } =
+        compilerOptions
     return Object.keys(paths).map(alias => [
         alias,
         paths[alias].map(
             value =>
                 `./${Path.relative(
                     srcDir,
-                    Path.resolve(projectDir, baseUrl, value)
+                    Path.resolve(prjDir, baseUrl, value)
                 )}`
         ),
     ])
@@ -46,26 +47,60 @@ export function applyAliases(path, aliases, jsModuleDir, srcDir, outDir) {
     if (!candidates) return [path]
 
     const tsModuleDir = Path.resolve(srcDir, Path.relative(outDir, jsModuleDir))
-    return candidates.map(newPath =>
-        Path.relative(tsModuleDir, Path.resolve(srcDir, newPath))
+    return candidates.map(
+        newPath =>
+            `./${Path.relative(tsModuleDir, Path.resolve(srcDir, newPath))}`
     )
 }
 
 /**
+ * If the path is matched by an alias, return the candidates
+ * with the wildcard replaced by the correct string.
+ *
+ * Example:
+ * ```ts
+ * getAliases(
+ *   "@/toto",
+ *   [
+ *     ["@/*", ["src/*", "node_modules/*"]]
+ *   ]
+ * ) === ["src/toto", "node_modules/toto"]
+ * ```
  * @param {string} path
  * @param {Array<[string, string[]]>} aliases
  * @returns {string[] | null} `null` if no alias exists for this path.
  */
 function getAliases(path, aliases) {
     for (const [pattern, val] of aliases) {
-        if (!Micromatch.isMatch(path, pattern)) continue
+        const match = applyPattern(path, pattern)
+        if (match === null) continue
 
-        const match = Micromatch.capture(pattern, path)
-        if (!match) {
-            return val
+        if (match.length > 0) {
+            const result = []
+            val.forEach(item => {
+                const newItem = item.replace("*", match)
+                result.push(newItem)
+            })
+            return result
         }
-        const [capture] = match
-        return capture ? val.map(item => item.replace("*", capture)) : val
+        return val
     }
     return null
+}
+
+/**
+ *
+ * @param {string} path
+ * @param {string} pattern
+ * @returns {string | null}
+ */
+function applyPattern(path, pattern) {
+    if (pattern.endsWith("*")) {
+        const prefix = pattern.substring(0, pattern.length - "*".length)
+        if (!path.startsWith(prefix)) {
+            return null
+        }
+        return path.substring(prefix.length)
+    }
+    return path === pattern ? "" : null
 }

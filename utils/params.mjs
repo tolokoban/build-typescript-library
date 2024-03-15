@@ -3,6 +3,7 @@ export function parseParams() {
     const params = {
         path: process.cwd(),
         watch: false,
+        srcDir: "src",
     }
     for (const arg of args) {
         if (arg === "-w" || arg === "--watch") {
