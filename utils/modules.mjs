@@ -6,12 +6,11 @@ import { applyAliases } from "./aliases.mjs"
 
 /**
  * @param {string} path
+ * @param {string[]} acceptedExtensions
  */
-export async function findModules(path) {
-    const acceptedExtensions = [".js"]
+export async function findModules(path, acceptedExtensions) {
     const jsFilter = info =>
-        !info.isDirectory() &&
-        acceptedExtensions.includes(extractExtension(info.name))
+        !info.isDirectory() && matchAnyExtension(info.name, acceptedExtensions)
     const dirFilter = info => !info.name.startsWith(".") && info.isDirectory()
     const files = await readDir(path, jsFilter)
     const fringe = await readDir(path, dirFilter)
@@ -162,4 +161,11 @@ function isFileandExists(path) {
 
     const stat = FS.statSync(path)
     return stat.isFile()
+}
+
+function matchAnyExtension(name, acceptedExtensions) {
+    for (const ext of acceptedExtensions) {
+        if (name.endsWith(ext)) return true
+    }
+    return false
 }

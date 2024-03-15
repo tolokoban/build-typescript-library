@@ -10,6 +10,7 @@ import { parseParams } from "./utils/params.mjs"
 import { findModules, listLocalImports } from "./utils/modules.mjs"
 import { parseAliases } from "./utils/aliases.mjs"
 import PackageJSON from "./package.json" assert { type: "json" }
+import { replaceAliasesInTypings } from "./utils/typing.mjs"
 
 const title = ` ${PackageJSON.name} (v${PackageJSON.version}) `
 const hruler = `+${"".padStart(title.length, "-")}+`
@@ -71,7 +72,7 @@ async function start() {
             console.clear()
         }
         await command(`npx tsc -p "${tsconfigFilename}"`)
-        const modules = await findModules(outDir)
+        const modules = await findModules(outDir, [".js"])
         console.log(
             Chalk.yellowBright("Generated JS modules: "),
             modules.length
@@ -122,6 +123,7 @@ async function start() {
             Chalk.yellowBright("Replaced import paths:"),
             stats.importReplacementCount
         )
+        await replaceAliasesInTypings(outDir, aliases)
     } catch (ex) {
         const msg = ex instanceof Error ? ex.message : JSON.stringify(ex)
         console.log()
