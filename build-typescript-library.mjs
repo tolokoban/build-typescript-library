@@ -72,6 +72,9 @@ async function start() {
         } else {
             console.clear()
         }
+        for (const task of params.runBefore) {
+            await command(`npm run ${task}`)
+        }
         await command(`npx tsc -p "${tsconfigFilename}"`)
         const modulesJS = await findFiles(outDir, [".js"])
         console.log(
@@ -132,6 +135,9 @@ async function start() {
             Chalk.yellowBright("Replaced DTS paths:   "),
             importReplacementCountDTS
         )
+        for (const task of params.runAfter) {
+            await command(`npm run ${task}`)
+        }
     } catch (ex) {
         const msg = ex instanceof Error ? ex.message : JSON.stringify(ex)
         console.log()
