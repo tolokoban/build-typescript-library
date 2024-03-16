@@ -1,30 +1,8 @@
 import FS, { existsSync } from "node:fs"
 import Path from "node:path"
 import * as Acorn from "acorn"
-import { extractExtension, readDir } from "./fs.mjs"
+import { extractExtension, replaceInFile } from "./fs.mjs"
 import { applyAliases } from "./aliases.mjs"
-
-/**
- * @param {string} path
- * @param {string[]} acceptedExtensions
- */
-export async function findModules(path, acceptedExtensions) {
-    const jsFilter = info =>
-        !info.isDirectory() && matchAnyExtension(info.name, acceptedExtensions)
-    const dirFilter = info => !info.name.startsWith(".") && info.isDirectory()
-    const files = await readDir(path, jsFilter)
-    const fringe = await readDir(path, dirFilter)
-    while (fringe.length > 0) {
-        const folder = fringe.shift()
-        if (!folder) continue
-
-        const subFolders = await readDir(folder, dirFilter)
-        subFolders.forEach(dir => fringe.push(dir))
-        const subFiles = await readDir(folder, jsFilter)
-        subFiles.forEach(f => files.push(f))
-    }
-    return files.map(f => Path.relative(path, f))
-}
 
 /**
  *
@@ -33,12 +11,12 @@ export async function findModules(path, acceptedExtensions) {
  * @param {string} srcDir
  * @param {string} outDir
  * @param {{
- *   importReplacementCount: number
+ *   importReplacementCountJS: number
  *   extraModuleExtensions: Map<string, number>
  * }} stats
  * @returns
  */
-export function listLocalImports(filename, aliases, srcDir, outDir, stats) {
+export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
     try {
         const jsModuleDir = Path.dirname(filename)
         const content = FS.readFileSync(filename).toString()
@@ -85,32 +63,15 @@ export function listLocalImports(filename, aliases, srcDir, outDir, stats) {
                     replacements.push({
                         start,
                         end,
-                        value: importPath,
+                        value: JSON.stringify(importPath),
                     })
-                    // console.log(
-                    //     "Replace",
-                    //     JSON.stringify(value),
-                    //     "into",
-                    //     JSON.stringify(importPath)
-                    // )
                 }
             } else {
                 continue
             }
         }
-        if (replacements.length > 0) {
-            const code = []
-            let i = 0
-            for (const { start, end, value } of replacements) {
-                code.push(content.substring(i, start))
-                code.push(JSON.stringify(value))
-                i = end
-            }
-            if (i < content.length) code.push(content.substring(i))
-            const newContent = code.join("")
-            FS.writeFileSync(filename, newContent)
-            stats.importReplacementCount += replacements.length
-        }
+        replaceInFile(filename, replacements)
+        stats.importReplacementCountJS += replacements.length
         return imports
     } catch (ex) {
         const msg = ex instanceof Error ? ex.message : `${ex}`
@@ -127,7 +88,7 @@ export function listLocalImports(filename, aliases, srcDir, outDir, stats) {
 function findLocation(text, pos) {
     const begin = text.substring(0, pos)
     const lines = begin.split("\n")
-    const lastLine = lines.pop()
+    const lastLine = lines.pop() ?? ""
     return `${lines.length + 1},${lastLine.length}`
 }
 
@@ -161,11 +122,4 @@ function isFileandExists(path) {
 
     const stat = FS.statSync(path)
     return stat.isFile()
-}
-
-function matchAnyExtension(name, acceptedExtensions) {
-    for (const ext of acceptedExtensions) {
-        if (name.endsWith(ext)) return true
-    }
-    return false
 }

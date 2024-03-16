@@ -94,7 +94,7 @@ function getAliases(path, aliases) {
  * @param {string} pattern
  * @returns {string | null}
  */
-function applyPattern(path, pattern) {
+export function applyPattern(path, pattern) {
     if (pattern.endsWith("*")) {
         const prefix = pattern.substring(0, pattern.length - "*".length)
         if (!path.startsWith(prefix)) {

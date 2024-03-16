@@ -7,7 +7,8 @@ import Chalk from "chalk"
 import Chokidar from "chokidar"
 import { exec } from "child_process"
 import { parseParams } from "./utils/params.mjs"
-import { findModules, listLocalImports } from "./utils/modules.mjs"
+import { listLocalImportsJS } from "./utils/modules.mjs"
+import { findFiles } from "./utils/fs.mjs"
 import { parseAliases } from "./utils/aliases.mjs"
 import PackageJSON from "./package.json" assert { type: "json" }
 import { replaceAliasesInTypings } from "./utils/typing.mjs"
@@ -60,11 +61,11 @@ let firstCompilation = true
 
 async function start() {
     const stats = {
-        importReplacementCount: 0,
+        importReplacementCountJS: 0,
+        importReplacementCountDTS: 0,
         extraModuleExtensions: new Map(),
     }
     try {
-        // console.log("\u001B[3J")
         if (firstCompilation) {
             console.log()
             firstCompilation = false
@@ -72,14 +73,14 @@ async function start() {
             console.clear()
         }
         await command(`npx tsc -p "${tsconfigFilename}"`)
-        const modules = await findModules(outDir, [".js"])
+        const modulesJS = await findFiles(outDir, [".js"])
         console.log(
             Chalk.yellowBright("Generated JS modules: "),
-            modules.length
+            modulesJS.length
         )
         const setRelativeImports = new Set()
-        for (const module of modules) {
-            const relImports = listLocalImports(
+        for (const module of modulesJS) {
+            const relImports = listLocalImportsJS(
                 Path.resolve(outDir, module),
                 aliases,
                 srcDir,
@@ -120,10 +121,17 @@ async function start() {
                 .join(", ")})`
         )
         console.log(
-            Chalk.yellowBright("Replaced import paths:"),
-            stats.importReplacementCount
+            Chalk.yellowBright("Replaced JS paths:    "),
+            stats.importReplacementCountJS
         )
-        await replaceAliasesInTypings(outDir, aliases)
+        const importReplacementCountDTS = await replaceAliasesInTypings(
+            outDir,
+            aliases
+        )
+        console.log(
+            Chalk.yellowBright("Replaced DTS paths:   "),
+            importReplacementCountDTS
+        )
     } catch (ex) {
         const msg = ex instanceof Error ? ex.message : JSON.stringify(ex)
         console.log()
@@ -142,6 +150,7 @@ async function start() {
 
 await start()
 
+/** @type {number | undefined | NodeJS.Timeout} */
 let timeout = 0
 
 if (params.watch) {

@@ -15,7 +15,6 @@ export function listImports(filename) {
     /** @type {Array<{ start: number, end: number, value: string }>} */
     const imports = []
     root.forEachChild(node => {
-        const kind = node.getKindName()
         if (
             node.isKind(SyntaxKind.ImportDeclaration) ||
             node.isKind(SyntaxKind.ExportDeclaration)
@@ -23,7 +22,6 @@ export function listImports(filename) {
             const name = node.getFirstChildByKind(SyntaxKind.StringLiteral)
             if (!name) return
 
-            console.log(name.getStart(), node.getEnd(), name.getText())
             const text = name.getText()
             imports.push({
                 start: name.getStart() + 1,
@@ -32,9 +30,5 @@ export function listImports(filename) {
             })
         }
     })
-    if (filename.endsWith("index.d.ts")) {
-        console.log(imports)
-        process.exit(1)
-    }
     return imports
 }
