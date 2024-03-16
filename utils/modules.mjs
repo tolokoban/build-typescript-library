@@ -1,8 +1,8 @@
 import FS, { existsSync } from "node:fs"
 import Path from "node:path"
-import * as Acorn from "acorn"
 import { extractExtension, replaceInFile } from "./fs.mjs"
 import { applyAliases } from "./aliases.mjs"
+import { listImports } from "./imports.mjs"
 
 /**
  *
@@ -19,60 +19,42 @@ import { applyAliases } from "./aliases.mjs"
 export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
     try {
         const jsModuleDir = Path.dirname(filename)
-        const content = FS.readFileSync(filename).toString()
-        const tree = Acorn.parse(content, {
-            ecmaVersion: 2020,
-            sourceType: "module",
-        })
-        const { body } = tree
-        if (!body || !Array.isArray(body)) return []
-
-        const imports = []
+        const importPositions = listImports(filename)
         const replacements = []
-        for (const node of body) {
-            if (
-                (node.type === "ExportNamedDeclaration" ||
-                    node.type === "ExportAllDeclaration" ||
-                    node.type === "ImportDeclaration") &&
-                node.source
-            ) {
-                const { start, end, value } = node.source
-                if (typeof value !== "string") continue
+        /** @type {string[]} */
+        const importPaths = []
+        for (const { start, end, value } of importPositions) {
+            const dealiased = applyAliases(
+                value,
+                aliases,
+                jsModuleDir,
+                srcDir,
+                outDir
+            )
+            let importPath =
+                selectBestCandidate(dealiased, jsModuleDir) ?? value
+            if (!importPath.startsWith(".")) continue
 
-                const dealiased = applyAliases(
-                    value,
-                    aliases,
-                    jsModuleDir,
-                    srcDir,
-                    outDir
+            const ext = extractExtension(importPath)
+            if (ext !== ".js") {
+                // This is special module (not a JS one).
+                importPaths.push(Path.resolve(jsModuleDir, importPath))
+                stats.extraModuleExtensions.set(
+                    ext,
+                    1 + (stats.extraModuleExtensions.get(ext) ?? 0)
                 )
-                let importPath =
-                    selectBestCandidate(dealiased, jsModuleDir) ?? value
-                if (!importPath.startsWith(".")) continue
-
-                const ext = extractExtension(importPath)
-                if (ext !== ".js") {
-                    // This is special module (not a JS one).
-                    imports.push(Path.resolve(jsModuleDir, importPath))
-                    stats.extraModuleExtensions.set(
-                        ext,
-                        1 + (stats.extraModuleExtensions.get(ext) ?? 0)
-                    )
-                }
-                if (importPath !== value) {
-                    replacements.push({
-                        start,
-                        end,
-                        value: JSON.stringify(importPath),
-                    })
-                }
-            } else {
-                continue
+            }
+            if (importPath !== value) {
+                replacements.push({
+                    start,
+                    end,
+                    value: importPath,
+                })
             }
         }
         replaceInFile(filename, replacements)
         stats.importReplacementCountJS += replacements.length
-        return imports
+        return importPaths
     } catch (ex) {
         const msg = ex instanceof Error ? ex.message : `${ex}`
         throw Error(
