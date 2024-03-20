@@ -12,6 +12,7 @@ import { findFiles } from "./utils/fs.mjs"
 import { parseAliases } from "./utils/aliases.mjs"
 import PackageJSON from "./package.json" assert { type: "json" }
 import { replaceAliasesInTypings } from "./utils/typing.mjs"
+import { checkCircuilarDependencies } from "./utils/dependencies.mjs"
 
 const title = ` ${PackageJSON.name} (v${PackageJSON.version}) `
 const hruler = `+${"".padStart(title.length, "-")}+`
@@ -60,10 +61,19 @@ async function command(cmd) {
 let firstCompilation = true
 
 async function start() {
+    /**
+     * @type {{
+     *   importReplacementCountJS: number
+     *   importReplacementCountDTS: number
+     *   extraModuleExtensions: Map<string, number>
+     *   dependencies: Map<string, string[]>
+     * }}
+     */
     const stats = {
         importReplacementCountJS: 0,
         importReplacementCountDTS: 0,
         extraModuleExtensions: new Map(),
+        dependencies: new Map(),
     }
     try {
         if (firstCompilation) {
@@ -90,6 +100,7 @@ async function start() {
                 outDir,
                 stats
             )
+            checkCircuilarDependencies(stats.dependencies)
             if (relImports.length === 0) continue
             const absImports = relImports.map(name =>
                 Path.relative(outDir, name)

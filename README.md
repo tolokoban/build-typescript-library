@@ -2,6 +2,18 @@
 
 Help create ESM libraries by taking care of extensions in relative imports and extra modules (css, jpg, ...).
 
+Here is what the tool do:
+
+* Compile your project with Typescript.
+* Copy all the non "*.ts" modules you have imported.
+* Expand the path aliases in the resuting "\*.js" and "*.d.st" files.
+* Track potential circular dependencies.
+
+Optionaly, it can also:
+
+* Watch for source changes.
+* Execute node tasks before and/or after compilation.
+
 ## Usage
 
 ```sh

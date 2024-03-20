@@ -12,12 +12,17 @@ import { listImports } from "./imports.mjs"
  * @param {string} outDir
  * @param {{
  *   importReplacementCountJS: number
+ *   importReplacementCountDTS: number
  *   extraModuleExtensions: Map<string, number>
+ *   dependencies: Map<string, string[]>
  * }} stats
  * @returns
  */
 export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
     try {
+        /** @type {string[]} */
+        const dependencies = []
+        stats.dependencies.set(Path.relative(outDir, filename), dependencies)
         const jsModuleDir = Path.dirname(filename)
         const importPositions = listImports(filename)
         const replacements = []
@@ -35,6 +40,9 @@ export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
                 selectBestCandidate(dealiased, jsModuleDir) ?? value
             if (!importPath.startsWith(".")) continue
 
+            dependencies.push(
+                Path.relative(outDir, Path.resolve(jsModuleDir, importPath))
+            )
             const ext = extractExtension(importPath)
             if (ext !== ".js") {
                 // This is special module (not a JS one).
