@@ -9,7 +9,7 @@ import { exec } from "child_process"
 import { parseParams } from "./utils/params.mjs"
 import { listLocalImportsJS } from "./utils/modules.mjs"
 import { findFiles } from "./utils/fs.mjs"
-import { parseAliases } from "./utils/aliases.mjs"
+import { AliasManager } from "./utils/aliases.mjs"
 import PackageJSON from "./package.json" assert { type: "json" }
 import { replaceAliasesInTypings } from "./utils/typing.mjs"
 import { checkCircuilarDependencies } from "./utils/dependencies.mjs"
@@ -28,10 +28,12 @@ if (!tsconfig.compilerOptions.outDir) {
     )
 }
 const prjDir = params.path
+const baseUrl = Path.resolve(prjDir, tsconfig.compilerOptions.baseUrl ?? ".")
 const outDir = Path.resolve(prjDir, tsconfig.compilerOptions.outDir)
 const srcDir = Path.resolve(prjDir, params.srcDir)
 console.log(Chalk.yellowBright("Build path"), outDir)
-const aliases = parseAliases(tsconfig, prjDir, srcDir)
+const aliasManager = new AliasManager(tsconfigFilename, srcDir)
+const aliases = aliasManager.paths
 for (const [key, val] of aliases) {
     console.log(
         Chalk.yellow("Alias:"),

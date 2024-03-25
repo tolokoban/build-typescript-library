@@ -1,36 +1,53 @@
+import FS from "node:fs"
 import Path from "node:path"
-import Micromatch from "micromatch"
+import JSON5 from "json5"
 
-/**
- *
- * @param {{
- *   compilerOptions?: {
- *     baseUrl?: string
- *     paths?: {
- *       [key: string]: string[]
- *     }
- *   }
- * }} tsconfig
- * @param {string} prjDir
- * @param {string} srcDir
- * @returns {Array<[string, string[]]>}
- */
-export function parseAliases(tsconfig, prjDir, srcDir) {
-    const { compilerOptions } = tsconfig
-    if (!compilerOptions) return []
+export class AliasManager {
+    /**
+     * @type {Array<[string, string[]]>}
+     */
+    paths = []
 
-    const { baseUrl = Path.relative(prjDir, srcDir), paths = {} } =
-        compilerOptions
-    return Object.keys(paths).map(alias => [
-        alias,
-        paths[alias].map(
-            value =>
-                `./${Path.relative(
-                    srcDir,
-                    Path.resolve(prjDir, baseUrl, value)
-                )}`
-        ),
-    ])
+    /**
+     * @param {string} tsconfigFilename Full path of the `tsconfig.json` file.
+     * @param {string} srcDir Absolute path of the source directory.
+     */
+    constructor(tsconfigFilename, srcDir) {
+        /**
+         * @type {{
+         *   compilerOptions?: {
+         *     baseUrl?: string
+         *     paths?: {
+         *       [key: string]: string[]
+         *     }
+         *   }
+         * }}
+         */
+        const tsconfig = JSON5.parse(
+            FS.readFileSync(tsconfigFilename).toString()
+        )
+        const baseUrl = Path.resolve(
+            Path.dirname(tsconfigFilename),
+            tsconfig.compilerOptions?.baseUrl ?? "."
+        )
+        const paths = tsconfig.compilerOptions?.paths ?? {}
+        for (const key of Object.keys(paths)) {
+            this.paths.push([
+                key,
+                paths[key].map(val =>
+                    Path.relative(srcDir, Path.resolve(baseUrl, val))
+                ),
+            ])
+        }
+    }
+
+    /**
+     * Expand the alias is any.
+     * Otherwise, return `path` verbatim.
+     * @param {string} path
+     * @returns {string}
+     */
+    parse(path) {}
 }
 
 /**
