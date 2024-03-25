@@ -1,6 +1,6 @@
 {
     "name": "build-typescript-library",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "private": false,
     "description": "Help create ESM libraries by taking care of extensions in relative imports and extra modules (css, jpg, ...).",
     "main": "build-typescript-library.mjs",

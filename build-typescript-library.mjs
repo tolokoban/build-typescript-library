@@ -28,7 +28,6 @@ if (!tsconfig.compilerOptions.outDir) {
     )
 }
 const prjDir = params.path
-const baseUrl = Path.resolve(prjDir, tsconfig.compilerOptions.baseUrl ?? ".")
 const outDir = Path.resolve(prjDir, tsconfig.compilerOptions.outDir)
 const srcDir = Path.resolve(prjDir, params.srcDir)
 console.log(Chalk.yellowBright("Build path"), outDir)
@@ -115,8 +114,13 @@ async function start() {
                 const dst = Path.resolve(outDir, imp)
                 // console.log("copy", Chalk.whiteBright(imp))
                 try {
+                    const dir = Path.dirname(dst)
+                    if (!FS.existsSync(dir)) {
+                        FS.mkdirSync(dir, { recursive: true })
+                    }
                     FS.copyFileSync(src, dst)
                 } catch (ex) {
+                    console.error(ex)
                     throw Error(
                         `Unable to copy file "${imp}\n  from ${src}\n    to ${dst}`
                     )
