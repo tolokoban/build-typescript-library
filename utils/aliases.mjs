@@ -117,7 +117,7 @@ export function applyPattern(path, pattern) {
         if (!path.startsWith(prefix)) {
             return null
         }
-        return path.substring(prefix.length)
+        return `./${path.substring(prefix.length)}`
     }
-    return path === pattern ? "" : null
+    return path === pattern ? "." : null
 }
