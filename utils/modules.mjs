@@ -24,6 +24,10 @@ export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
         const dependencies = []
         stats.dependencies.set(Path.relative(outDir, filename), dependencies)
         const jsModuleDir = Path.dirname(filename)
+        const tsModuleDir = Path.resolve(
+            srcDir,
+            Path.relative(outDir, jsModuleDir)
+        )
         const importPositions = listImports(filename)
         const replacements = []
         /** @type {string[]} */
@@ -37,7 +41,7 @@ export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
                 outDir
             )
             let importPath =
-                selectBestCandidate(dealiased, jsModuleDir) ?? value
+                selectBestCandidate(dealiased, tsModuleDir) ?? value
             if (!importPath.startsWith(".")) continue
 
             dependencies.push(
@@ -88,26 +92,27 @@ function findLocation(text, pos) {
  * we return the first match (with the potential `.js` extension).
  *
  * @param {string[]} paths
- * @param {string} jsModuleDir
+ * @param {string} tsModuleDir
  * @returns {string | null}
  */
-function selectBestCandidate(paths, jsModuleDir) {
+function selectBestCandidate(paths, tsModuleDir) {
     for (const path of paths) {
         if (!path.startsWith(".")) {
             // This is an absolute path.
             // Must be something from "node_modules/".
             return path
         }
-        if (isFileandExists(Path.resolve(jsModuleDir, path))) return path
-        const path2 = `${path}/index.js`
-        if (isFileandExists(Path.resolve(jsModuleDir, path2))) return path2
-        const path3 = `${path}.js`
-        if (isFileandExists(Path.resolve(jsModuleDir, path3))) return path3
+        const alternatives = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"]
+        for (const alternative of alternatives) {
+            const candidate = `${path}${alternative}`
+            if (isFileAndExists(Path.resolve(tsModuleDir, candidate)))
+                return candidate
+        }
     }
     return null
 }
 
-function isFileandExists(path) {
+function isFileAndExists(path) {
     if (!existsSync(path)) return false
 
     const stat = FS.statSync(path)
