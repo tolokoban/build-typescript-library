@@ -41,7 +41,7 @@ export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
                 outDir
             )
             let importPath =
-                selectBestCandidate(dealiased, tsModuleDir) ?? value
+                selectBestCandidate(dealiased, jsModuleDir) ?? value
             if (!importPath.startsWith(".")) continue
 
             dependencies.push(
@@ -92,24 +92,25 @@ function findLocation(text, pos) {
  * we return the first match (with the potential `.js` extension).
  *
  * @param {string[]} paths
- * @param {string} tsModuleDir
+ * @param {string} jsModuleDir
  * @returns {string | null}
  */
-function selectBestCandidate(paths, tsModuleDir) {
+function selectBestCandidate(paths, jsModuleDir) {
     for (const path of paths) {
         if (!path.startsWith(".")) {
             // This is an absolute path.
             // Must be something from "node_modules/".
             return path
         }
-        const alternatives = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"]
+        const alternatives = ["", ".js", "/index.js"]
         for (const alternative of alternatives) {
             const candidate = `${path}${alternative}`
-            if (isFileAndExists(Path.resolve(tsModuleDir, candidate)))
+            if (isFileAndExists(Path.resolve(jsModuleDir, candidate)))
                 return candidate
         }
     }
-    return null
+    const [path] = paths
+    return path ?? null
 }
 
 function isFileAndExists(path) {

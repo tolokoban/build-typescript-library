@@ -97,7 +97,7 @@ async function start() {
         )
         const setRelativeImports = new Set()
         for (const module of modulesJS) {
-            const relImports = listLocalImportsJS(
+            const extraImportOutDirs = listLocalImportsJS(
                 Path.resolve(outDir, module),
                 aliases,
                 srcDir,
@@ -105,11 +105,12 @@ async function start() {
                 stats
             )
             checkCircuilarDependencies(stats.dependencies)
-            if (relImports.length === 0) continue
-            const absImports = relImports.map(name =>
+            if (extraImportOutDirs.length === 0) continue
+
+            const extraImportRelDirs = extraImportOutDirs.map(name =>
                 Path.relative(outDir, name)
             )
-            for (const imp of absImports) {
+            for (const imp of extraImportRelDirs) {
                 if (setRelativeImports.has(imp)) continue
 
                 setRelativeImports.add(imp)
