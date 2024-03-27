@@ -60,8 +60,11 @@ async function command(cmd) {
 }
 
 let firstCompilation = true
+let needToRecompile = false
+let isCompiling = false
 
 async function start() {
+    isCompiling = true
     /**
      * @type {{
      *   importReplacementCountJS: number
@@ -164,10 +167,16 @@ async function start() {
             console.log(Chalk.red(ex.stack))
         }
         console.log()
+    } finally {
+        isCompiling = false
     }
     console.log()
     if (params.watch) {
         console.log(Chalk.greenBright("Waiting for file changes..."))
+    }
+    if (needToRecompile) {
+        needToRecompile = false
+        setTimeout(start, 1)
     }
 }
 
@@ -183,6 +192,9 @@ if (params.watch) {
         if (event === "add" || event === "addDir") return
 
         clearTimeout(timeout)
-        timeout = setTimeout(() => void start(), 200)
+        timeout = setTimeout(() => {
+            if (!isCompiling) void start()
+            else needToRecompile = true
+        }, 200)
     })
 }
