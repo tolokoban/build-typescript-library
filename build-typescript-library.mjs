@@ -10,9 +10,12 @@ import { parseParams } from "./utils/params.mjs"
 import { listLocalImportsJS } from "./utils/modules.mjs"
 import { findFiles } from "./utils/fs.mjs"
 import { AliasManager } from "./utils/aliases.mjs"
-import PackageJSON from "./package.json" assert { type: "json" }
 import { replaceAliasesInTypings } from "./utils/typing.mjs"
 import { checkCircuilarDependencies } from "./utils/dependencies.mjs"
+
+import { readFile } from "node:fs/promises"
+const fileUrl = new URL("./package.json", import.meta.url)
+const PackageJSON = JSON.parse(await readFile(fileUrl, "utf8"))
 
 const title = ` ${PackageJSON.name} (v${PackageJSON.version}) `
 const hruler = `+${"".padStart(title.length, "-")}+`
