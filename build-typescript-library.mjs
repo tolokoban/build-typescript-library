@@ -92,7 +92,7 @@ async function start() {
         for (const task of params.runBefore) {
             await command(`npm run ${task}`)
         }
-        await command(`npx tsc -p "${tsconfigFilename}"`)
+        await command(`npx -p typescript tsc -p "${tsconfigFilename}"`)
         const modulesJS = await findFiles(outDir, [".js"])
         console.log(
             Chalk.yellowBright("Generated JS modules: "),
