@@ -11,7 +11,7 @@ import { listLocalImportsJS } from "./utils/modules.mjs"
 import { findFiles } from "./utils/fs.mjs"
 import { AliasManager } from "./utils/aliases.mjs"
 import { replaceAliasesInTypings } from "./utils/typing.mjs"
-import { checkCircuilarDependencies } from "./utils/dependencies.mjs"
+import { checkCircuilarDependencies as checkCircularDependencies } from "./utils/dependencies.mjs"
 
 import { readFile } from "node:fs/promises"
 const fileUrl = new URL("./package.json", import.meta.url)
@@ -107,19 +107,29 @@ async function start() {
                 outDir,
                 stats
             )
-            checkCircuilarDependencies(stats.dependencies)
+            checkCircularDependencies(stats.dependencies)
             if (extraImportOutDirs.length === 0) continue
 
             const extraImportRelDirs = extraImportOutDirs.map(name =>
                 Path.relative(outDir, name)
             )
+            if (params.verbose && extraImportRelDirs.length > 0) {
+                console.log("Module:", Chalk.blueBright(module), srcDir, outDir)
+                console.log(
+                    "Extra imports:",
+                    extraImportRelDirs.map(name => Chalk.blue(name)).join(", ")
+                )
+            }
             for (const imp of extraImportRelDirs) {
                 if (setRelativeImports.has(imp)) continue
 
                 setRelativeImports.add(imp)
                 const src = Path.resolve(srcDir, imp)
                 const dst = Path.resolve(outDir, imp)
-                // console.log("copy", Chalk.whiteBright(imp))
+                if (params.verbose) {
+                    console.log("Copy:", Chalk.whiteBright(src))
+                    console.log("  to:", Chalk.whiteBright(dst))
+                }
                 try {
                     const dir = Path.dirname(dst)
                     if (!FS.existsSync(dir)) {

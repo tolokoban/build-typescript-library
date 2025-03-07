@@ -4,7 +4,9 @@ export function parseParams() {
      * @type {{
      *   path: string
      *   watch: boolean
+     *   verbose: boolean
      *   srcDir: string
+     *   dependencies: string | null
      *   runBefore: string[]
      *   runAfter: string[]
      * }}
@@ -12,7 +14,9 @@ export function parseParams() {
     const params = {
         path: "",
         watch: false,
+        verbose: false,
         srcDir: "src",
+        dependencies: null,
         runBefore: [],
         runAfter: [],
     }
@@ -23,9 +27,14 @@ export function parseParams() {
 
         if (arg === "-w" || arg === "--watch") {
             params.watch = true
+        } else if (arg === "-v" || arg === "--verbose") {
+            params.verbose = true
         } else if (arg === "-s" || arg === "--srcDir") {
             const srcDir = args.shift()
             if (srcDir) params.srcDir = srcDir
+        } else if (arg === "-d" || arg === "--exportDependencies") {
+            const depFilename = args.shift()
+            if (depFilename) params.dependencies = depFilename
         } else if (arg === "-b" || arg === "--runBefore") {
             const task = args.shift()
             if (task) params.runBefore.push(task)
