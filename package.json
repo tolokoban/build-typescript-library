@@ -1,6 +1,6 @@
 {
     "name": "build-typescript-library",
-    "version": "0.8.0",
+    "version": "0.8.1",
     "private": false,
     "description": "Help create ESM libraries by taking care of extensions in relative imports and extra modules (css, jpg, ...).",
     "main": "build-typescript-library.mjs",
@@ -26,8 +26,8 @@
     "homepage": "https://github.com/tolokoban/build-typescript-library#readme",
     "dependencies": {
         "chalk": "^5.4.1",
-        "chokidar": "^3.6.0",
+        "chokidar": "^4.0.3",
         "json5": "^2.2.3",
-        "ts-morph": "^25.0.1"
+        "ts-morph": "^26.0.0"
     }
 }

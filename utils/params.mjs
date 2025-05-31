@@ -32,7 +32,7 @@ export function parseParams() {
         } else if (arg === "-v" || arg === "--verbose") {
             params.verbose = true
         } else if (arg === "-c" || arg === "--allow-circular") {
-            params.verbose = true
+            params.allowCircular = true
         } else if (arg === "-s" || arg === "--srcDir") {
             const srcDir = args.shift()
             if (srcDir) params.srcDir = srcDir
