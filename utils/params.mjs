@@ -7,6 +7,7 @@ export function parseParams() {
      *   verbose: boolean
      *   srcDir: string
      *   dependencies: string | null
+     *   allowCircular: boolean
      *   runBefore: string[]
      *   runAfter: string[]
      * }}
@@ -17,6 +18,7 @@ export function parseParams() {
         verbose: false,
         srcDir: "src",
         dependencies: null,
+        allowCircular: false,
         runBefore: [],
         runAfter: [],
     }
@@ -28,6 +30,8 @@ export function parseParams() {
         if (arg === "-w" || arg === "--watch") {
             params.watch = true
         } else if (arg === "-v" || arg === "--verbose") {
+            params.verbose = true
+        } else if (arg === "-c" || arg === "--allow-circular") {
             params.verbose = true
         } else if (arg === "-s" || arg === "--srcDir") {
             const srcDir = args.shift()
@@ -65,6 +69,9 @@ export function parseParams() {
         )
         console.log(
             "  --runAfter, -a: Task to run with npm just after the compilation starts."
+        )
+        console.log(
+            "  --allow-circular, -c: Allow circular dependencies. (default to false)"
         )
         console.log()
         process.exit(1)

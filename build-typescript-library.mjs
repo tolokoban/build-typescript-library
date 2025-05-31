@@ -107,7 +107,8 @@ async function start() {
                 outDir,
                 stats
             )
-            checkCircularDependencies(stats.dependencies)
+            if (!params.allowCircular)
+                checkCircularDependencies(stats.dependencies)
             if (extraImportOutDirs.length === 0) continue
 
             const extraImportRelDirs = extraImportOutDirs.map(name =>
