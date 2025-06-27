@@ -33,7 +33,8 @@ if (!tsconfig.compilerOptions.outDir) {
 const prjDir = params.path
 const outDir = Path.resolve(prjDir, tsconfig.compilerOptions.outDir)
 const srcDir = Path.resolve(prjDir, params.srcDir)
-console.log(Chalk.yellowBright("Build path"), outDir)
+console.log(Chalk.yellowBright("Input path "), srcDir)
+console.log(Chalk.yellowBright("Output path"), outDir)
 const aliasManager = new AliasManager(tsconfigFilename, srcDir)
 const aliases = aliasManager.paths
 for (const [key, val] of aliases) {
