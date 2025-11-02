@@ -5,6 +5,7 @@ import FS from "fs"
 import Path from "path"
 import Chalk from "chalk"
 import Chokidar from "chokidar"
+import { readFile } from "node:fs/promises"
 import { exec } from "child_process"
 import { parseParams } from "./utils/params.mjs"
 import { listLocalImportsJS } from "./utils/modules.mjs"
@@ -13,7 +14,6 @@ import { AliasManager } from "./utils/aliases.mjs"
 import { replaceAliasesInTypings } from "./utils/typing.mjs"
 import { checkCircuilarDependencies as checkCircularDependencies } from "./utils/dependencies.mjs"
 
-import { readFile } from "node:fs/promises"
 const fileUrl = new URL("./package.json", import.meta.url)
 const PackageJSON = JSON.parse(await readFile(fileUrl, "utf8"))
 
@@ -46,6 +46,9 @@ for (const [key, val] of aliases) {
     )
 }
 
+/**
+ * @param {string} cmd 
+ */
 async function command(cmd) {
     return new Promise((resolve, reject) => {
         console.log(Chalk.cyanBright(cmd))
