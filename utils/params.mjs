@@ -59,6 +59,9 @@ export function parseParams() {
         console.log()
         console.log("Options:")
         console.log(
+            "  --versose, -v"
+        )
+        console.log(
             "  --watch, -w: Watch mode. Compilation will start again as soon as a file is changed in the source dir."
         )
         console.log(

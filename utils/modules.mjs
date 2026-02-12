@@ -3,6 +3,7 @@ import Path from "node:path"
 import { extractExtension, replaceInFile } from "./fs.mjs"
 import { applyAliases } from "./aliases.mjs"
 import { listImports } from "./imports.mjs"
+import Chalk  from "chalk"
 
 /**
  *
@@ -16,9 +17,10 @@ import { listImports } from "./imports.mjs"
  *   extraModuleExtensions: Map<string, number>
  *   dependencies: Map<string, string[]>
  * }} stats
+ * @param {boolean} verbose
  * @returns
  */
-export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
+export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats, verbose) {
     try {
         /** @type {string[]} */
         const dependencies = []
@@ -28,11 +30,14 @@ export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
             srcDir,
             Path.relative(outDir, jsModuleDir)
         )
-        const importPositions = listImports(filename)
+        const importPositions = listImports(filename, verbose)
         const replacements = []
         /** @type {string[]} */
         const importPaths = []
-        for (const { start, end, value } of importPositions) {
+        for (const { start, end, value, codeLine } of importPositions) {
+            if (verbose) {
+                console.log(">", Chalk.greenBright(codeLine), value)
+            }
             const dealiased = applyAliases(
                 value,
                 aliases,
@@ -40,17 +45,27 @@ export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats) {
                 srcDir,
                 outDir
             )
+            if (verbose) {
+                console.log(Chalk.cyanBright("Aliases:"))
+                console.log(dealiased.map(t => `    ${t}`).join("\n"))
+            }
             let importPath =
                 selectBestCandidate(dealiased, jsModuleDir) ?? value
+            if (verbose) {
+                console.log(Chalk.cyanBright("Import path:"), importPath)
+            }
             if (!importPath.startsWith(".")) continue
 
             dependencies.push(
                 Path.relative(outDir, Path.resolve(jsModuleDir, importPath))
             )
             const ext = extractExtension(importPath)
-            if (ext !== ".js") {
+            if (ext !== ".js" && ext !== ".jsx") {
                 // This is special module (not a JS one).
                 importPaths.push(Path.resolve(jsModuleDir, importPath))
+                if (verbose) {
+                    console.log(Chalk.cyanBright("Special module:"), importPaths.join(", "))
+                }
                 stats.extraModuleExtensions.set(
                     ext,
                     1 + (stats.extraModuleExtensions.get(ext) ?? 0)
@@ -102,7 +117,7 @@ function selectBestCandidate(paths, jsModuleDir) {
             // Must be something from "node_modules/".
             return path
         }
-        const alternatives = ["", ".js", "/index.js"]
+        const alternatives = ["", ".js", "/index.js", ".jsx", "/index.jsx"]
         for (const alternative of alternatives) {
             const candidate = `${path}${alternative}`
             if (isFileAndExists(Path.resolve(jsModuleDir, candidate)))
