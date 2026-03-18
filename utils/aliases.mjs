@@ -1,6 +1,7 @@
 import FS from "node:fs"
 import Path from "node:path"
 import JSON5 from "json5"
+import Chalk from "chalk"
 
 export class AliasManager {
     /**
@@ -16,6 +17,7 @@ export class AliasManager {
         /**
          * @type {{
          *   compilerOptions?: {
+         *     incremental?: boolean
          *     baseUrl?: string
          *     paths?: {
          *       [key: string]: string[]
@@ -39,6 +41,12 @@ export class AliasManager {
                 ),
             ])
         }
+        console.log(
+            Chalk.yellowBright("Incremental build:"), 
+            tsconfig.compilerOptions?.incremental ? 
+                Chalk.bold.greenBright("Yes") : 
+                Chalk.bold.redBright("No")
+        )
     }
 
     /**

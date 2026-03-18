@@ -13,6 +13,7 @@ import { findFiles } from "./utils/fs.mjs";
 import { AliasManager } from "./utils/aliases.mjs";
 import { replaceAliasesInTypings } from "./utils/typing.mjs";
 import { checkCircuilarDependencies as checkCircularDependencies } from "./utils/dependencies.mjs";
+import { keepOnlyNewOnes } from "./utils/filter.mjs"
 
 const fileUrl = new URL("./package.json", import.meta.url);
 const PackageJSON = JSON.parse(await readFile(fileUrl, "utf8"));
@@ -56,10 +57,12 @@ async function command(cmd) {
       if (err) {
         if (stdout) console.error(Chalk.redBright(stdout));
         if (stderr) console.error(Chalk.redBright(stderr));
+        console.error()
         reject(err);
       } else {
         if (stdout) console.log(stdout);
         if (stderr) console.log(stderr);
+        console.log()
         resolve({ stdout, stderr });
       }
     });
@@ -69,6 +72,10 @@ async function command(cmd) {
 let firstCompilation = true;
 let needToRecompile = false;
 let isCompiling = false;
+/**
+ * @type {Map<string, number>}
+ */
+const fileCompilTimes = new Map()
 
 async function start() {
   isCompiling = true;
@@ -99,8 +106,11 @@ async function start() {
       }
       await command(`npm run ${task}`);
     }
-    await command(`npx -p typescript tsc -p "${tsconfigFilename}"`);
-    const modulesJS = await findFiles(outDir, [".js"]);
+    const time = Date.now()
+    await command(`npx -p typescript tsc --pretty -p "${tsconfigFilename}"`);
+    console.log(Chalk.yellowBright("Typescript compilation time: "), Math.ceil(Date.now() - time), "ms")
+    console.log()
+    const modulesJS = await keepOnlyNewOnes(await findFiles(outDir, [".js"]), fileCompilTimes, outDir);
     console.log(Chalk.yellowBright("Generated JS modules: "), modulesJS.length);
     const setRelativeImports = new Set();
     for (const module of modulesJS) {
@@ -215,6 +225,6 @@ if (params.watch) {
     timeout = setTimeout(() => {
       if (!isCompiling) void start();
       else needToRecompile = true;
-    }, 200);
+    }, 500);
   });
 }
