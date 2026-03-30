@@ -6,7 +6,7 @@ Here is what the tool do:
 
 * Compile your project with Typescript.
 * Copy all the non "*.ts" modules you have imported.
-* Expand the path aliases in the resuting "\*.js" and "*.d.st" files.
+* Expand the path aliases in the resulting "\*.js" and "*.d.st" files.
 * Track potential circular dependencies.
 
 Optionaly, it can also:
