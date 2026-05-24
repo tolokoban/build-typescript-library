@@ -1,13 +1,13 @@
 {
     "name": "build-typescript-library",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "private": false,
     "description": "Help create ESM libraries by taking care of extensions in relative imports and extra modules (css, jpg, ...).",
     "main": "build-typescript-library.mjs",
     "bin": "build-typescript-library.mjs",
     "type": "module",
     "scripts": {
-        "test": "node ./build-typescript-library.mjs --watch --allow-circular ../../game/tgd2/lib/"
+        "test": "node ./build-typescript-library.mjs --verbose --allow-circular ../../trail-passion/tp-website/v5/lib/tp-core"
     },
     "repository": {
         "type": "git",
@@ -27,6 +27,7 @@
     "dependencies": {
         "chalk": "^5.6.2",
         "chokidar": "^5.0.0",
+        "css-tree": "^3.2.1",
         "json5": "^2.2.3",
         "ts-morph": "^27.0.2"
     },

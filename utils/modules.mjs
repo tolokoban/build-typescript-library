@@ -1,9 +1,10 @@
 import FS, { existsSync } from "node:fs"
 import Path from "node:path"
-import { extractExtension, replaceInFile } from "./fs.mjs"
+import Chalk from "chalk"
 import { applyAliases } from "./aliases.mjs"
+import { lookForDependenciesInCssFile } from "./css.mjs"
+import { extractExtension, replaceInFile } from "./fs.mjs"
 import { listImports } from "./imports.mjs"
-import Chalk  from "chalk"
 
 /**
  *
@@ -20,16 +21,12 @@ import Chalk  from "chalk"
  * @param {boolean} verbose
  * @returns
  */
-export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats, verbose) {
+export async function listLocalImportsJS(filename, aliases, srcDir, outDir, stats, verbose) {
     try {
         /** @type {string[]} */
         const dependencies = []
         stats.dependencies.set(Path.relative(outDir, filename), dependencies)
         const jsModuleDir = Path.dirname(filename)
-        const tsModuleDir = Path.resolve(
-            srcDir,
-            Path.relative(outDir, jsModuleDir)
-        )
         const importPositions = listImports(filename, verbose)
         const replacements = []
         /** @type {string[]} */
@@ -70,6 +67,36 @@ export function listLocalImportsJS(filename, aliases, srcDir, outDir, stats, ver
                     ext,
                     1 + (stats.extraModuleExtensions.get(ext) ?? 0)
                 )
+                if (ext === ".css") {
+                    // Check for url() to see if this CSS has dependencies.
+                    const cssDependencies = await lookForDependenciesInCssFile(jsModuleDir, importPath)
+                    if (cssDependencies.length > 0) {
+                        if (verbose) {
+                            console.log(Chalk.cyanBright("CSS dependencies:"), importPath)
+                        }
+                        for (const cssDep of cssDependencies) {
+                            if (verbose) {
+                                console.log("  -", Chalk.cyanBright(cssDep))
+                            }
+
+                            const cssPath = Path.resolve(jsModuleDir, importPath)
+                            const path = Path.resolve(Path.dirname(cssPath), cssDep)
+                            const sourcePath = Path.resolve(
+                                srcDir,
+                                Path.relative(outDir, path)
+                            )
+                            if (!FS.existsSync(sourcePath)) {
+                                throw new Error(`Missing file in CSS "${Path.relative(outDir, cssPath)}": "${cssDep}"
+File not found: ${sourcePath}`)
+                            }
+                            const cssExt = extractExtension(cssDep)
+                            importPaths.push(path)
+                            stats.extraModuleExtensions.set(
+                                cssExt,
+                                1 + (stats.extraModuleExtensions.get(cssExt) ?? 0))
+                        }
+                    }
+                }
             }
             if (importPath !== value) {
                 replacements.push({

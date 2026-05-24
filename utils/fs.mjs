@@ -1,6 +1,5 @@
-import { Dirent, existsSync } from "node:fs"
+import FS, { Dirent, existsSync } from "node:fs"
 import AsyncFS from "node:fs/promises"
-import FS from "node:fs"
 import Path from "node:path"
 
 /**
