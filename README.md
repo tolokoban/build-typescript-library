@@ -53,3 +53,9 @@ But there are two major issues to use it to build libraries:
 
 1. Today, `build-typescript-library` only copy the modules you import in a `.ts` or `.tsx` file.
 If you have a `.css` file that uses an image, this will not be detected.
+
+## Release notes
+
+### v0.11.1
+
+* If en error occurs and we are not in watch mode, then the process exits with an error code **1**.
