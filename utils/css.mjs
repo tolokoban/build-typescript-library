@@ -12,7 +12,9 @@ import * as csstree from "css-tree"
  * @return {Promise<string[]>}
  */
 export async function lookForDependenciesInCssFile(jsModuleDir, importPath) {
-    const cssContent = (await AsyncFS.readFile(Path.resolve(jsModuleDir, importPath))).toString()
+    const path = Path.resolve(jsModuleDir, importPath)
+    console.log('🐞 [css@16] path =', path) // @FIXME: Remove this line written on 2026-06-04 at 18:34
+    const cssContent = (await AsyncFS.readFile(path)).toString()
     const urls = extractUrlsInCSS(cssContent)
     return urls.map(item => item.trim()).filter(item => item.startsWith("./") || item.startsWith("../"))
 }

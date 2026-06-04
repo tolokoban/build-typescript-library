@@ -1,4 +1,4 @@
-import FS, { existsSync } from "node:fs"
+import FS, { copyFileSync, existsSync } from "node:fs"
 import Path from "node:path"
 import Chalk from "chalk"
 import { applyAliases } from "./aliases.mjs"
@@ -59,10 +59,13 @@ export async function listLocalImportsJS(filename, aliases, srcDir, outDir, stat
             const ext = extractExtension(importPath)
             if (ext !== ".js" && ext !== ".jsx") {
                 // This is special module (not a JS one).
-                importPaths.push(Path.resolve(jsModuleDir, importPath))
+                const specialModulePathDestination = Path.resolve(jsModuleDir, importPath)
+                const specialModulePathSource = Path.resolve(srcDir, Path.relative(outDir, specialModulePathDestination))
                 if (verbose) {
-                    console.log(Chalk.cyanBright("Special module:"), importPaths.join(", "))
+                    console.log(Chalk.cyanBright("Special module:"), specialModulePathSource)
                 }
+                copyFileSync(specialModulePathSource, specialModulePathDestination)
+                importPaths.push(specialModulePathDestination)
                 stats.extraModuleExtensions.set(
                     ext,
                     1 + (stats.extraModuleExtensions.get(ext) ?? 0)

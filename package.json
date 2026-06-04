@@ -7,7 +7,7 @@
     "bin": "build-typescript-library.mjs",
     "type": "module",
     "scripts": {
-        "test": "node ./build-typescript-library.mjs --verbose --allow-circular ../../trail-passion/tp-website/v5/lib/tp-core"
+        "test": "node ./build-typescript-library.mjs --verbose --allow-circular ../../../OBI/morphoviewer/lib"
     },
     "repository": {
         "type": "git",
