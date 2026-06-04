@@ -197,6 +197,7 @@ async function start() {
             console.log(Chalk.red(ex.stack))
         }
         console.log()
+        if (!params.watch) process.exit(1)
     } finally {
         isCompiling = false
     }
