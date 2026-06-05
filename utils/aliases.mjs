@@ -1,6 +1,7 @@
+/** @import { Params } from './types' */
+
 import FS from "node:fs"
 import Path from "node:path"
-import JSON5 from "json5"
 import Chalk from "chalk"
 
 export class AliasManager {
@@ -10,52 +11,73 @@ export class AliasManager {
     paths = []
 
     /**
-     * @param {string} tsconfigFilename Full path of the `tsconfig.json` file.
-     * @param {string} srcDir Absolute path of the source directory.
+     * @param {Params} params
      */
-    constructor(tsconfigFilename, srcDir) {
-        /**
-         * @type {{
-         *   compilerOptions?: {
-         *     incremental?: boolean
-         *     baseUrl?: string
-         *     paths?: {
-         *       [key: string]: string[]
-         *     }
-         *   }
-         * }}
-         */
-        const tsconfig = JSON5.parse(
-            FS.readFileSync(tsconfigFilename).toString()
-        )
+    constructor(params) {
+        this.srcDir = params.srcDir
+        this.outDir = params.outDir
         const baseUrl = Path.resolve(
-            Path.dirname(tsconfigFilename),
-            tsconfig.compilerOptions?.baseUrl ?? "."
+            params.prjDir,
+            params.tsconfig.compilerOptions?.baseUrl ?? "."
         )
-        const paths = tsconfig.compilerOptions?.paths ?? {}
+        const paths = params.tsconfig.compilerOptions?.paths ?? {}
         for (const key of Object.keys(paths)) {
             this.paths.push([
                 key,
                 paths[key].map(val =>
-                    Path.relative(srcDir, Path.resolve(baseUrl, val))
+                    Path.relative(params.srcDir, Path.resolve(baseUrl, val))
                 ),
             ])
         }
-        console.log(
-            Chalk.yellowBright("Incremental build:"), 
-            tsconfig.compilerOptions?.incremental ? 
-                Chalk.bold.greenBright("Yes") : 
-                Chalk.bold.redBright("No")
-        )
+        for (const [key, val] of this.paths) {
+            console.log(
+                Chalk.yellow("Alias:"),
+                Chalk.whiteBright(key),
+                ">",
+                Chalk.whiteBright(val),
+            )
+        }
     }
 
     /**
-     * Expand the alias is any.
-     * Otherwise, return `path` verbatim.
-     * @param {string} path
-     * @returns {string}
+     * Expand the alias if any.
+     * Otherwise, return `importPath` verbatim.
+     * @param {string} importPath - The string inside the `import ... from` statement.
+     * @param {string} moduleFilename - The full path of the module file (in `outDir`) that does the import.
+     * @returns {string} The unaliased import path.
      */
-    parse(path) {}
+    resolve(importPath, moduleFilename) {
+        const candidates = getAliases(importPath, this.paths)
+        if (!candidates) return importPath
+
+        const moduleDirnameRel = Path.relative(this.outDir, Path.dirname(moduleFilename))
+        const moduleDirnameSrc = Path.resolve(this.srcDir, moduleDirnameRel)
+        for (const candidate of candidates) {
+            const path = Path.resolve(this.srcDir, candidate)
+            const variants = getVariants(path)
+            for (const probe of variants) {
+                if (FS.existsSync(probe)) {
+                    const fullpath = Path.resolve(this.srcDir, candidate)
+                    return `./${Path.relative(moduleDirnameSrc, fullpath)}`
+                }
+            }
+        }
+
+        throw new Error(`Import not found in ${Path.relative(this.outDir, moduleFilename)}\n${[importPath, ...candidates].map(
+            path => `   ... from "${path}"`
+        ).join("\n")
+            }`)
+    }
+}
+
+/**
+ * A `*.js` file can have been compiled from a `*.ts`, `*.tsx`, `*.js` or `*.jsx` source.
+ * @param {string} path 
+ * @returns {string[]}
+ */
+function getVariants(path) {
+    const prefix = path.endsWith(".js") ? path.slice(0, -".js".length) : path
+    return ["/index.ts", "/index.tsx", ".ts", ".tsx", ".js", ".jsx", ""].map(ext => `${prefix}${ext}`)
 }
 
 /**
@@ -66,7 +88,7 @@ export class AliasManager {
  * @param {string} outDir Full path where to find Javascript sources.
  * @returns {string[]}
  */
-export function applyAliases(path, aliases, jsModuleDir, srcDir, outDir) {
+export function _applyAliases(path, aliases, jsModuleDir, srcDir, outDir) {
     /** @type {string[] | null} */
     const candidates = getAliases(path, aliases)
     if (!candidates) return [path]
@@ -101,6 +123,7 @@ function getAliases(path, aliases) {
         if (match === null) continue
 
         if (match.length > 0) {
+            /** @type {string[]} */
             const result = []
             val.forEach(item => {
                 const newItem = item.replace("*", match)

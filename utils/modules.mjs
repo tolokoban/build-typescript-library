@@ -1,7 +1,9 @@
+/** @import { Params, Stats, Replacement } from './types' */
+
 import FS, { copyFileSync, existsSync } from "node:fs"
 import Path from "node:path"
 import Chalk from "chalk"
-import { applyAliases } from "./aliases.mjs"
+import { AliasManager } from "./aliases.mjs"
 import { lookForDependenciesInCssFile } from "./css.mjs"
 import { extractExtension, replaceInFile } from "./fs.mjs"
 import { listImports } from "./imports.mjs"
@@ -9,25 +11,20 @@ import { listImports } from "./imports.mjs"
 /**
  *
  * @param {string} filename
- * @param {Array<[string, string[]]>} aliases
- * @param {string} srcDir
- * @param {string} outDir
- * @param {{
- *   importReplacementCountJS: number
- *   importReplacementCountDTS: number
- *   extraModuleExtensions: Map<string, number>
- *   dependencies: Map<string, string[]>
- * }} stats
- * @param {boolean} verbose
+ * @param {AliasManager} aliasManager
+ * @param {Params} params
+ * @param {Stats} stats
  * @returns
  */
-export async function listLocalImportsJS(filename, aliases, srcDir, outDir, stats, verbose) {
+export async function listLocalImportsJS(filename, aliasManager, params, stats) {
+    const { srcDir, outDir, verbose } = params
     try {
         /** @type {string[]} */
         const dependencies = []
         stats.dependencies.set(Path.relative(outDir, filename), dependencies)
         const jsModuleDir = Path.dirname(filename)
         const importPositions = listImports(filename, verbose)
+        /** @type {Replacement[]} */
         const replacements = []
         /** @type {string[]} */
         const importPaths = []
@@ -35,28 +32,21 @@ export async function listLocalImportsJS(filename, aliases, srcDir, outDir, stat
             if (verbose) {
                 console.log(">", Chalk.greenBright(codeLine), value)
             }
-            const dealiased = applyAliases(
-                value,
-                aliases,
-                jsModuleDir,
-                srcDir,
-                outDir
-            )
-            if (verbose) {
-                console.log(Chalk.cyanBright("Aliases:"))
-                console.log(dealiased.map(t => `    ${t}`).join("\n"))
-            }
-            let importPath =
-                selectBestCandidate(dealiased, jsModuleDir) ?? value
-            if (verbose) {
-                console.log(Chalk.cyanBright("Import path:"), importPath)
+            const importPath = aliasManager.resolve(value, filename)
+            if (importPath !== value) {
+                // It's an alias replacement
+                replacements.push({ start, end, value: importPath })
+                stats.importReplacementCountJS++
+                if (verbose) {
+                    console.log(Chalk.cyanBright("Import path:"), JSON.stringify(value), ">>", Chalk.bold(JSON.stringify(importPath)))
+                }
             }
             if (!importPath.startsWith(".")) continue
 
-            dependencies.push(
-                Path.relative(outDir, Path.resolve(jsModuleDir, importPath))
-            )
-            const ext = extractExtension(importPath)
+            const importWithExtension = addJsExtensionIfNeeded(Path.resolve(jsModuleDir, importPath))
+            const importFullpath = Path.relative(outDir, importWithExtension)
+            dependencies.push(importFullpath)
+            const ext = extractExtension(importFullpath)
             if (ext !== ".js" && ext !== ".jsx") {
                 // This is special module (not a JS one).
                 const specialModulePathDestination = Path.resolve(jsModuleDir, importPath)
@@ -102,16 +92,8 @@ File not found: ${sourcePath}`)
                     }
                 }
             }
-            if (importPath !== value) {
-                replacements.push({
-                    start,
-                    end,
-                    value: importPath,
-                })
-            }
         }
         replaceInFile(filename, replacements)
-        stats.importReplacementCountJS += replacements.length
         return importPaths
     } catch (ex) {
         const msg = ex instanceof Error ? ex.message : `${ex}`
@@ -159,9 +141,33 @@ function selectBestCandidate(paths, jsModuleDir) {
     return path ?? null
 }
 
+/**
+ * @param {string} path 
+ * @returns 
+ */
 function isFileAndExists(path) {
     if (!existsSync(path)) return false
 
     const stat = FS.statSync(path)
     return stat.isFile()
 }
+
+/**
+ * JS modules can be imported without the `.js` extension.
+ * this function add the extension if it is missing.
+ * @param {string} path 
+ * @returns {string}
+ */
+function addJsExtensionIfNeeded(path) {
+    const extensions = [
+        "/index.js",
+        "",
+        ".js"
+    ]
+    for (const ext of extensions) {
+        const candidate = `${path}${ext}`
+        if (FS.existsSync(candidate)) return candidate
+    }
+    return path
+}
+

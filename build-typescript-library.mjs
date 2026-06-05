@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import { exec } from "node:child_process"
+/** @import { Params, Stats } from './utils/types' */
+
 import FS from "node:fs"
 import { readFile } from "node:fs/promises"
 import Path from "node:path"
 import Chalk from "chalk"
 import Chokidar from "chokidar"
-import JSON5 from "json5"
 import { AliasManager } from "./utils/aliases.mjs"
+import { command } from "./utils/command.mjs"
 import { checkCircuilarDependencies as checkCircularDependencies } from "./utils/dependencies.mjs"
 import { keepOnlyNewOnes } from "./utils/filter.mjs"
 import { findFiles } from "./utils/fs.mjs"
@@ -17,57 +18,24 @@ import { replaceAliasesInTypings } from "./utils/typing.mjs"
 
 const fileUrl = new URL("./package.json", import.meta.url)
 const PackageJSON = JSON.parse(await readFile(fileUrl, "utf8"))
-
 const title = ` ${PackageJSON.name} (v${PackageJSON.version}) `
 const hruler = `+${"".padStart(title.length, "-")}+`
 console.log(Chalk.whiteBright(hruler))
 console.log(Chalk.whiteBright(`|${title}|`))
 console.log(Chalk.whiteBright(hruler))
 const params = parseParams()
-const tsconfigFilename = Path.resolve(params.path, "tsconfig.json")
-const tsconfig = JSON5.parse(FS.readFileSync(tsconfigFilename).toString())
-if (!tsconfig.compilerOptions.outDir) {
-    throw Error(
-        "You must define compilerOptions.outDir in the tsconfig.json file!",
-    )
-}
-const prjDir = params.path
-const outDir = Path.resolve(prjDir, tsconfig.compilerOptions.outDir)
-const srcDir = Path.resolve(prjDir, params.srcDir)
+console.log(
+    Chalk.yellowBright("Incremental build:"),
+    params.incrementalBuild ?
+        Chalk.bold.greenBright("Yes") :
+        Chalk.bold.redBright("No")
+)
+const { outDir, srcDir } = params
 console.log(Chalk.yellowBright("Input path "), srcDir)
 console.log(Chalk.yellowBright("Output path"), outDir)
-const aliasManager = new AliasManager(tsconfigFilename, srcDir)
-const aliases = aliasManager.paths
-for (const [key, val] of aliases) {
-    console.log(
-        Chalk.yellow("Alias:"),
-        Chalk.whiteBright(key),
-        ">",
-        Chalk.whiteBright(val),
-    )
-}
-
-/**
- * @param {string} cmd
- */
-async function command(cmd) {
-    return new Promise((resolve, reject) => {
-        console.log(Chalk.cyanBright(cmd))
-        exec(cmd, (err, stdout, stderr) => {
-            if (err) {
-                if (stdout) console.error(Chalk.redBright(stdout))
-                if (stderr) console.error(Chalk.redBright(stderr))
-                console.error()
-                reject(err)
-            } else {
-                if (stdout) console.log(stdout)
-                if (stderr) console.log(stderr)
-                console.log()
-                resolve({ stdout, stderr })
-            }
-        })
-    })
-}
+console.log(Chalk.gray("Cleaning output path..."))
+FS.rmSync(outDir, { recursive: true, force: true })
+const aliasManager = new AliasManager(params)
 
 let firstCompilation = true
 let needToRecompile = false
@@ -80,12 +48,7 @@ const fileCompilTimes = new Map()
 async function start() {
     isCompiling = true
     /**
-     * @type {{
-     *   importReplacementCountJS: number
-     *   importReplacementCountDTS: number
-     *   extraModuleExtensions: Map<string, number>
-     *   dependencies: Map<string, string[]>
-     * }}
+     * @type {Stats}
      */
     const stats = {
         importReplacementCountJS: 0,
@@ -109,7 +72,7 @@ async function start() {
         const time = Date.now()
         const typescriptVersion = await command("npx -p typescript tsc --version")
         console.log(Chalk.yellowBright("Typescript version:"), typescriptVersion.stdout)
-        await command(`npx -p typescript tsc --pretty -p "${tsconfigFilename}"`)
+        await command(`npx -p typescript tsc --pretty -p "${params.tsconfigFilename}"`)
         console.log(Chalk.yellowBright("Typescript compilation time: "), Math.ceil(Date.now() - time), "ms")
         console.log()
         const modulesJS = await keepOnlyNewOnes(await findFiles(outDir, [".js"]), fileCompilTimes, outDir)
@@ -121,11 +84,9 @@ async function start() {
             }
             const extraImportOutDirs = await listLocalImportsJS(
                 Path.resolve(outDir, module),
-                aliases,
-                srcDir,
-                outDir,
-                stats,
-                !!params.verbose
+                aliasManager,
+                params,
+                stats
             )
             if (!params.allowCircular) checkCircularDependencies(stats.dependencies)
             if (extraImportOutDirs.length === 0) continue
@@ -181,7 +142,8 @@ async function start() {
         )
         const importReplacementCountDTS = await replaceAliasesInTypings(
             outDir,
-            aliases,
+            aliasManager,
+            params
         )
         console.log(
             Chalk.yellowBright("Replaced DTS paths:   "),
@@ -221,7 +183,7 @@ let timeout = 0
 if (params.watch) {
     Chokidar.watch(srcDir, {
         awaitWriteFinish: true,
-    }).on("all", (event, path) => {
+    }).on("all", (event, _path) => {
         if (event === "add" || event === "addDir") return
 
         clearTimeout(timeout)

@@ -7,7 +7,7 @@
     "bin": "build-typescript-library.mjs",
     "type": "module",
     "scripts": {
-        "test": "node ./build-typescript-library.mjs --verbose --allow-circular ../../../OBI/morphoviewer/lib"
+        "test": "node ./build-typescript-library.mjs --allow-circular ../../../OBI/morphoviewer/lib"
     },
     "repository": {
         "type": "git",

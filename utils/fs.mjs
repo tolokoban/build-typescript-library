@@ -1,11 +1,12 @@
+/** @import { Replacement } from "./types" */
+
 import FS, { Dirent, existsSync } from "node:fs"
 import AsyncFS from "node:fs/promises"
 import Path from "node:path"
 
 /**
- *
  * @param {string} filename
- * @param {Array<{ start: number, end: number, value: string }>} replacements
+ * @param {Replacement[]} replacements
  */
 export function replaceInFile(filename, replacements) {
     if (replacements.length > 0) {

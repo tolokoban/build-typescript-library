@@ -1,33 +1,36 @@
 import FS from "node:fs"
 import Path from "node:path"
+import { AliasManager, applyPattern } from "./aliases.mjs"
 import { findFiles, replaceInFile } from "./fs.mjs"
 import { listImports } from "./imports.mjs"
-import { applyPattern } from "./aliases.mjs"
 
 /**
  * @param {string} outDir
- * @param {Array<[string, string[]]>} aliases
+ * @param {AliasManager} aliasManager
+ * @param {{
+ *   verbose?: boolean
+ * }} params
  */
-export async function replaceAliasesInTypings(outDir, aliases) {
+export async function replaceAliasesInTypings(outDir, aliasManager, params) {
     let totalReplacementCount = 0
     const files = await findFiles(outDir, [".d.ts"])
     for (const filename of files) {
         const path = Path.resolve(outDir, filename)
         const modDir = Path.dirname(path)
-        const imports = listImports(path)
+        const imports = listImports(path, params.verbose ?? false)
         /** @type {Array<{ start: number, end: number, value: string }>} */
         const replacements = []
         for (const { start, end, value } of imports) {
-            const importPath = realizePath(value, aliases, outDir, modDir)
+            const importPath = realizePath(value, aliasManager.paths, outDir, modDir)
             if (importPath !== value) {
                 replacements.push({
                     start,
                     end,
                     value: importPath.endsWith(".d.ts")
                         ? importPath.substring(
-                              0,
-                              importPath.length - ".d.ts".length
-                          )
+                            0,
+                            importPath.length - ".d.ts".length
+                        )
                         : importPath,
                 })
             }

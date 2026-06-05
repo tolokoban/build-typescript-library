@@ -1,26 +1,32 @@
+/** @import { Params } from './types' */
+
+import FS from "node:fs"
+import Path from "node:path"
+import Chalk from "chalk"
+import JSON5 from "json5"
+
+/**
+ * @returns {Readonly<Params>}
+ */
 export function parseParams() {
     const [_node, _program, ...args] = process.argv
     /**
-     * @type {{
-     *   path: string
-     *   watch: boolean
-     *   verbose: boolean
-     *   srcDir: string
-     *   dependencies: string | null
-     *   allowCircular: boolean
-     *   runBefore: string[]
-     *   runAfter: string[]
-     * }}
+     * @type {Params}
      */
     const params = {
         path: "",
         watch: false,
         verbose: false,
+        prjDir: "",
         srcDir: "src",
+        outDir: "",
+        tsconfigFilename: "",
         dependencies: null,
         allowCircular: false,
+        incrementalBuild: false,
         runBefore: [],
         runAfter: [],
+        tsconfig: { compilerOptions: {} }
     }
     let hasPath = false
     while (args.length) {
@@ -50,7 +56,34 @@ export function parseParams() {
             hasPath = true
         }
     }
-    if (!hasPath) {
+    try {
+        if (!hasPath) {
+            throw new Error("Workspace folder is missing!")
+        }
+        const tsconfigFilename = Path.resolve(params.path, "tsconfig.json")
+        if (!FS.existsSync(tsconfigFilename)) {
+            throw new Error(`This workspace has no "tsconfig.json" file!\n${tsconfigFilename}`)
+        }
+        params.tsconfigFilename = tsconfigFilename
+        const tsconfig = JSON5.parse(FS.readFileSync(tsconfigFilename).toString())
+        if (!tsconfig.compilerOptions.outDir) {
+            throw Error(
+                "You must define compilerOptions.outDir in the tsconfig.json file!",
+            )
+        }
+        params.tsconfig = tsconfig
+        params.incrementalBuild = tsconfig.compilerOptions?.incremental ?? false
+        const prjDir = params.path
+        const outDir = Path.resolve(prjDir, tsconfig.compilerOptions.outDir)
+        const srcDir = Path.resolve(prjDir, params.srcDir)
+        params.prjDir = prjDir
+        params.outDir = outDir
+        params.srcDir = srcDir
+    } catch (ex) {
+        console.error(Chalk.bgRed.whiteBright.bold(
+            ex instanceof Error ?
+                ex.message : JSON.stringify(ex)
+        ))
         console.log()
         console.log("Usage:")
         console.log(
