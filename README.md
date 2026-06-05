@@ -56,6 +56,15 @@ If you have a `.css` file that uses an image, this will not be detected.
 
 ## Release notes
 
+### v0.12.0
+
+* **Refactoring** - Introduced proper TypeScript type definitions (`Params`, `Stats`, `Replacement`) in a dedicated `types.d.ts` file.
+* **AliasManager** - Now takes a `Params` object and provides a `resolve()` method that checks for file existence with multiple extensions (`.ts`, `.tsx`, `.js`, `.jsx`, index files).
+* **command utility** - Extracted the `command()` function into its own `utils/command.mjs` module.
+* **parseParams** - Now fully parses `tsconfig.json`, computes all derived paths (`prjDir`, `outDir`, `srcDir`, `tsconfigFilename`), and detects `incrementalBuild` setting.
+* **modules.mjs** - Simplified `listLocalImportsJS` signature by passing `AliasManager` and `Params` objects instead of many separate arguments.
+* **typing.mjs** - `replaceAliasesInTypings` now accepts an `AliasManager` instance and `params` instead of a raw aliases array.
+
 ### v0.11.1
 
 * If en error occurs and we are not in watch mode, then the process exits with an error code **1**.
