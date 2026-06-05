@@ -62,6 +62,7 @@ export async function listLocalImportsJS(filename, aliases, srcDir, outDir, stat
                 const specialModulePathDestination = Path.resolve(jsModuleDir, importPath)
                 const specialModulePathSource = Path.resolve(srcDir, Path.relative(outDir, specialModulePathDestination))
                 if (verbose) {
+                    console.log(Chalk.cyanBright("Special module:"), specialModulePathDestination)
                     console.log(Chalk.cyanBright("Special module:"), specialModulePathSource)
                 }
                 copyFileSync(specialModulePathSource, specialModulePathDestination)

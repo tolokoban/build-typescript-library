@@ -107,6 +107,8 @@ async function start() {
             await command(`npm run ${task}`)
         }
         const time = Date.now()
+        const typescriptVersion = await command("npx -p typescript tsc --version")
+        console.log(Chalk.yellowBright("Typescript version:"), typescriptVersion.stdout)
         await command(`npx -p typescript tsc --pretty -p "${tsconfigFilename}"`)
         console.log(Chalk.yellowBright("Typescript compilation time: "), Math.ceil(Date.now() - time), "ms")
         console.log()
