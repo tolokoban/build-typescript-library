@@ -1,13 +1,13 @@
 {
     "name": "build-typescript-library",
-    "version": "0.12.0",
+    "version": "0.12.1",
     "private": false,
     "description": "Help create ESM libraries by taking care of extensions in relative imports and extra modules (css, jpg, ...).",
     "main": "build-typescript-library.mjs",
     "bin": "build-typescript-library.mjs",
     "type": "module",
     "scripts": {
-        "test": "node ./build-typescript-library.mjs --allow-circular ../../../OBI/morphoviewer/lib"
+        "test": "node ./build-typescript-library.mjs --allow-circular ../../../github/trail-passion/tp-website/v5/lib/tp-core"
     },
     "repository": {
         "type": "git",

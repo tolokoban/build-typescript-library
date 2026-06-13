@@ -55,6 +55,10 @@ export async function listLocalImportsJS(filename, aliasManager, params, stats) 
                     console.log(Chalk.cyanBright("Special module:"), specialModulePathDestination)
                     console.log(Chalk.cyanBright("Special module:"), specialModulePathSource)
                 }
+                const dir = Path.dirname(specialModulePathDestination)
+                if (!FS.existsSync(dir)) {
+                    FS.mkdirSync(dir, { recursive: true })
+                }
                 copyFileSync(specialModulePathSource, specialModulePathDestination)
                 importPaths.push(specialModulePathDestination)
                 stats.extraModuleExtensions.set(
